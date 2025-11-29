@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>University Result Portal</title>
-    
     <link rel="icon" href="data:,">
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/lucide@0.263.1"></script>
 
     <style>
         @media print {
@@ -27,41 +24,50 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        
-        // --- CRITICAL CONFIGURATION ---
-        // Use relative path so it works on BOTH Localhost and Vercel automatically
         const API_URL = "/api"; 
 
-        // --- SAFE ICON COMPONENT (Prevents Black Screen Crashes) ---
-        const Icon = ({ name, size = 20 }) => {
-            // 1. Check if library loaded
-            if (!window.lucide || !window.lucide.icons) {
-                return <span className="text-xs text-gray-400">Loading...</span>;
-            }
-            // 2. Check if specific icon exists
-            const iconNode = window.lucide.icons[name];
-            if (!iconNode) {
-                console.warn(`Icon not found: ${name}`);
-                return <span className="text-xs text-red-500">?</span>;
-            }
-            
-            // 3. Render safely
-            const svg = iconNode.toSvg({ width: size, height: size });
-            return <span className="inline-flex mr-2 align-middle" dangerouslySetInnerHTML={{ __html: svg }} />;
+        // --- BULLETPROOF ICONS (Hardcoded SVGs) ---
+        // This removes the dependency on external CDNs that crash your app
+        const ICONS = {
+            Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+            UploadCloud: <g><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></g>,
+            Trash2: <g><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></g>,
+            GraduationCap: <g><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></g>,
+            Printer: <g><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></g>,
+            FileSpreadsheet: <g><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></g>,
+            AlertCircle: <g><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></g>
         };
 
-        // --- 1. LOGIN COMPONENT ---
+        const Icon = ({ name, size = 20 }) => {
+            const content = ICONS[name] || <circle cx="12" cy="12" r="10"/>; // Default circle if missing
+            return (
+                <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="inline-flex mr-2 align-middle"
+                >
+                    {content}
+                </svg>
+            );
+        };
+
+        // --- LOGIN ---
         const Login = ({ onLogin }) => {
             const [role, setRole] = useState('student');
             const [username, setUsername] = useState('');
             const [password, setPassword] = useState('');
             const [msg, setMsg] = useState('');
-            const [loading, setLoading] = useState(false);
 
             const handleLogin = async (e) => {
                 e.preventDefault();
                 setMsg('');
-                setLoading(true);
                 try {
                     const res = await fetch(`${API_URL}/auth/login`, {
                         method: 'POST',
@@ -69,22 +75,13 @@
                         body: JSON.stringify({ username, password })
                     });
                     const data = await res.json();
-                    
                     if (res.ok) {
-                        if (data.role !== role) { 
-                            setMsg(`Access Denied: You are trying to login as ${role} but this account is ${data.role}`); 
-                        } else {
-                            onLogin(data);
-                        }
+                        if (data.role !== role) { setMsg(`Access Denied: Not an ${role}`); return; }
+                        onLogin(data);
                     } else {
                         setMsg(data.message || "Invalid Credentials");
                     }
-                } catch (err) { 
-                    console.error("Login Error:", err);
-                    setMsg("Server Connection Failed. Check Console."); 
-                } finally {
-                    setLoading(false);
-                }
+                } catch (err) { setMsg("Server connection failed"); }
             };
 
             return (
@@ -94,24 +91,19 @@
                             <button onClick={() => setRole('student')} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'student' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Student</button>
                             <button onClick={() => setRole('admin')} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'admin' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Admin</button>
                         </div>
-                        <h2 className="text-2xl font-bold text-center mb-2">University Portal</h2>
-                        <p className="text-center text-gray-400 text-sm mb-6">{role === 'student' ? 'Enter ID & DOB' : 'Admin Credentials'}</p>
-                        
+                        <h2 className="text-2xl font-bold text-center mb-6">University Portal</h2>
                         {msg && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm border border-red-200">{msg}</div>}
-                        
                         <form onSubmit={handleLogin} className="space-y-4">
                             <input className="w-full border p-3 rounded" placeholder={role === 'student' ? "Student ID" : "Username"} value={username} onChange={e=>setUsername(e.target.value)} required />
                             <input type={role === 'student' ? "text" : "password"} className="w-full border p-3 rounded" placeholder={role === 'student' ? "DOB (YYYY-MM-DD)" : "Password"} value={password} onChange={e=>setPassword(e.target.value)} required />
-                            <button disabled={loading} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded transition">
-                                {loading ? "Verifying..." : "Login"}
-                            </button>
+                            <button className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded transition">Login</button>
                         </form>
                     </div>
                 </div>
             );
         };
 
-        // --- 2. ADMIN DASHBOARD ---
+        // --- ADMIN DASHBOARD ---
         const AdminDashboard = ({ user, onLogout }) => {
             const [status, setStatus] = useState('');
             const [deleteSem, setDeleteSem] = useState('');
@@ -125,7 +117,6 @@
                     const lines = ev.target.result.split('\n');
                     const groupedData = {};
 
-                    // Group rows by "StudentID + Semester"
                     for (let i = 1; i < lines.length; i++) {
                         const row = lines[i].split(',');
                         if (row.length < 9) continue;
@@ -162,7 +153,7 @@
                             body: JSON.stringify(payload)
                         });
                         const d = await res.json();
-                        setStatus(res.ok ? `✅ ${d.message}` : '❌ Failed: ' + (d.message || "Unknown error"));
+                        setStatus(res.ok ? `✅ ${d.message}` : '❌ Failed');
                     } catch (err) { setStatus('❌ Server Error'); }
                 };
                 reader.readAsText(file);
@@ -183,31 +174,27 @@
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 p-4 md:p-10">
-                    <div className="flex justify-between items-center mb-10">
-                        <h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Admin Console</h1>
-                        <button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button>
-                    </div>
+                <div className="min-h-screen bg-slate-50 p-10">
+                    <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Administrative Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button></div>
                     
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                         {/* UPLOAD SECTION */}
-                        <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
-                            <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
+                        <div className="bg-white p-10 rounded-xl shadow-lg text-center border border-slate-200">
+                            <div className="mb-6 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
                             <h2 className="text-xl font-bold mb-2">Upload Results</h2>
-                            <p className="text-sm text-gray-500 mb-4">Select your CSV file to auto-create students and upload grades.</p>
-                            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition">
+                            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                <p className="font-bold text-slate-600 group-hover:text-blue-600">Click to Select CSV</p>
+                                <p className="font-bold text-slate-600 group-hover:text-blue-600">Click to Select CSV File</p>
                             </div>
                         </div>
 
                         {/* DELETE SECTION */}
-                        <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
-                            <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
+                        <div className="bg-white p-10 rounded-xl shadow-lg text-center border border-slate-200">
+                            <div className="mb-6 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
                             <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
-                            <p className="text-sm text-gray-500 mb-4">Remove all results for a specific semester.</p>
+                            <p className="text-sm text-gray-500 mb-4">Enter semester name (e.g. "Fall 2024")</p>
                             <div className="flex gap-2">
-                                <input className="border p-2 rounded w-full" placeholder='e.g. "Fall 2024"' value={deleteSem} onChange={e=>setDeleteSem(e.target.value)} />
+                                <input className="border p-2 rounded w-full" placeholder="Semester Name" value={deleteSem} onChange={e=>setDeleteSem(e.target.value)} />
                                 <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
                             </div>
                         </div>
@@ -218,19 +205,16 @@
             );
         };
 
-        // --- 3. STUDENT DASHBOARD ---
+        // --- STUDENT DASHBOARD ---
         const StudentDashboard = ({ user, onLogout }) => {
             const [allResults, setAllResults] = useState([]);
             const [selectedSem, setSelectedSem] = useState(null);
 
             useEffect(() => {
-                fetch(`${API_URL}/results/${user.id}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        setAllResults(data);
-                        if(data.length > 0) setSelectedSem(data[0]);
-                    })
-                    .catch(err => console.error("Fetch Error:", err));
+                fetch(`${API_URL}/results/${user.id}`).then(r => r.json()).then(data => {
+                    setAllResults(data);
+                    if(data.length > 0) setSelectedSem(data[0]);
+                });
             }, [user.id]);
 
             return (
@@ -310,7 +294,7 @@
         const App = () => {
             const [user, setUser] = useState(null);
             
-            // ERROR BOUNDARY (Prevent White Screen Crash)
+            // Basic Error Boundary
             try {
                 if (!user) return <Login onLogin={setUser} />;
                 return user.role === 'admin' 
