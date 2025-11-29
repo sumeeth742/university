@@ -13,32 +13,31 @@ router.get('/:studentId', async (req, res) => {
     }
 });
 
-// 2. BULK UPLOAD
+// 2. BULK UPLOAD (Auto-Create Students & Grouping)
 router.post('/bulk', async (req, res) => {
     try {
-        const rows = req.body; 
+        const rows = req.body; // Grouped data from frontend
         let count = 0;
 
         for (const row of rows) {
             if (!row.studentId || !row.dob) continue;
 
-            // Sync User
+            // Sync User (Create if new, Update if exists)
+            // This ensures Password is set to the DOB from the CSV
             await User.findOneAndUpdate(
                 { username: row.studentId },
                 {
                     username: row.studentId,
                     password: row.dob, 
                     name: row.studentName,
-                    role: 'student'
+                    role: 'student',
+                    department: 'General'
                 },
                 { upsert: true, new: true }
             );
 
-            // Overwrite existing results for this semester/student
-            await Result.deleteMany({ 
-                studentId: row.studentId, 
-                semester: row.semester 
-            });
+            // Clear old data for this specific semester to avoid duplicates
+            await Result.deleteMany({ studentId: row.studentId, semester: row.semester });
 
             // Create new result
             await Result.create({
@@ -49,21 +48,21 @@ router.post('/bulk', async (req, res) => {
             });
             count++;
         }
-        res.status(201).json({ message: `Successfully processed ${count} records.` });
+        res.status(201).json({ message: `Successfully processed ${count} semester records.` });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Upload failed: " + error.message });
+        console.error("Upload Error:", error);
+        res.status(500).json({ message: "Bulk upload failed: " + error.message });
     }
 });
 
-// 3. DELETE SPECIFIC SEMESTER (NEW FEATURE)
+// 3. DELETE SEMESTER (For Cleanup)
 router.delete('/delete-semester', async (req, res) => {
     try {
         const { semester } = req.body;
         if (!semester) return res.status(400).json({ message: "Semester name required" });
 
         const result = await Result.deleteMany({ semester: semester });
-        res.json({ message: `Deleted ${result.deletedCount} records for '${semester}'.` });
+        res.json({ message: `Deleted ${result.deletedCount} records matching '${semester}'.` });
     } catch (error) {
         res.status(500).json({ message: "Server Error" });
     }
