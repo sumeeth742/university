@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>University Result Portal</title>
+    <link rel="icon" href="data:,">
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -32,7 +33,6 @@
             return <span className="inline-flex mr-2 align-middle" dangerouslySetInnerHTML={{ __html: svg }} />;
         };
 
-        // --- LOGIN ---
         const Login = ({ onLogin }) => {
             const [role, setRole] = useState('student');
             const [username, setUsername] = useState('');
@@ -77,54 +77,30 @@
             );
         };
 
-        // --- ADMIN DASHBOARD (SMART GROUPING LOGIC) ---
         const AdminDashboard = ({ user, onLogout }) => {
             const [status, setStatus] = useState('');
+            const [deleteSem, setDeleteSem] = useState('');
 
             const handleUpload = (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                
                 reader.onload = async (ev) => {
                     const lines = ev.target.result.split('\n');
                     const groupedData = {};
-
-                    // 1. Group rows by "StudentID + Semester"
                     for (let i = 1; i < lines.length; i++) {
                         const row = lines[i].split(',');
                         if (row.length < 9) continue;
                         const [id, name, dob, sem, gpa, sub, code, grd, crd] = row.map(x => x.trim());
-
-                        // Create a unique key for grouping
                         const key = `${id}-${sem}`;
-
                         if (!groupedData[key]) {
-                            // First time seeing this semester for this student? Initialize the object.
-                            groupedData[key] = {
-                                studentId: id,
-                                studentName: name,
-                                dob: dob,
-                                semester: sem,
-                                gpa: Number(gpa),
-                                subjects: [] 
-                            };
+                            groupedData[key] = { studentId: id, studentName: name, dob: dob, semester: sem, gpa: Number(gpa), subjects: [] };
                         }
-                        
-                        // Add the subject to the list
-                        groupedData[key].subjects.push({
-                            name: sub,
-                            code: code,
-                            grade: grd,
-                            credits: Number(crd)
-                        });
+                        groupedData[key].subjects.push({ name: sub, code: code, grade: grd, credits: Number(crd) });
                     }
-
-                    // Convert map back to array
                     const payload = Object.values(groupedData);
-
                     try {
-                        setStatus(`Uploading ${payload.length} semester records...`);
+                        setStatus(`Uploading...`);
                         const res = await fetch(`${API_URL}/results/bulk`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -137,24 +113,53 @@
                 reader.readAsText(file);
             };
 
+            // NEW: Delete specific semester
+            const handleDelete = async () => {
+                if(!deleteSem) return;
+                if(!confirm(`Are you sure you want to delete ALL results for "${deleteSem}"?`)) return;
+                try {
+                    const res = await fetch(`${API_URL}/results/delete-semester`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ semester: deleteSem })
+                    });
+                    const d = await res.json();
+                    setStatus(`🗑️ ${d.message}`);
+                } catch(err) { setStatus("❌ Delete Failed"); }
+            };
+
             return (
                 <div className="min-h-screen bg-slate-50 p-10">
                     <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Administrative Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button></div>
-                    <div className="bg-white p-12 rounded-xl shadow-lg max-w-3xl mx-auto text-center border border-slate-200">
-                        <div className="mb-6 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={48}/></div>
-                        <h2 className="text-2xl font-bold mb-2">Upload Result CSV</h2>
-                        <p className="text-gray-500 mb-8">System will automatically group subjects by semester.</p>
-                        <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-10 bg-slate-50 hover:bg-blue-50 transition">
-                            <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                            <p className="font-bold text-lg text-slate-600 group-hover:text-blue-600">Click to Select CSV File</p>
+                    
+                    <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {/* UPLOAD SECTION */}
+                        <div className="bg-white p-10 rounded-xl shadow-lg text-center border border-slate-200">
+                            <div className="mb-6 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
+                            <h2 className="text-xl font-bold mb-2">Upload Results</h2>
+                            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
+                                <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
+                            </div>
                         </div>
-                        {status && <div className="mt-6 p-4 bg-blue-50 text-blue-800 rounded font-bold border border-blue-100">{status}</div>}
+
+                        {/* DELETE SECTION */}
+                        <div className="bg-white p-10 rounded-xl shadow-lg text-center border border-slate-200">
+                            <div className="mb-6 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
+                            <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
+                            <p className="text-sm text-gray-500 mb-4">Enter exact semester name to remove (e.g. "Fall 2024")</p>
+                            <div className="flex gap-2">
+                                <input className="border p-2 rounded w-full" placeholder="Semester Name" value={deleteSem} onChange={e=>setDeleteSem(e.target.value)} />
+                                <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
+                            </div>
+                        </div>
                     </div>
+
+                    {status && <div className="mt-8 p-4 bg-slate-800 text-white rounded font-bold text-center max-w-xl mx-auto shadow-lg">{status}</div>}
                 </div>
             );
         };
 
-        // --- STUDENT DASHBOARD (OFFICIAL TRANSCRIPT) ---
         const StudentDashboard = ({ user, onLogout }) => {
             const [allResults, setAllResults] = useState([]);
             const [selectedSem, setSelectedSem] = useState(null);
@@ -189,19 +194,17 @@
                                         <h1 className="text-3xl font-serif font-bold text-gray-900 uppercase">Institute of Technology</h1>
                                         <p className="text-gray-500 font-serif text-sm tracking-widest mt-1">OFFICIAL GRADE CARD</p>
                                     </div>
-
                                     <div className="flex justify-between mb-8 font-serif text-sm">
                                         <div>
                                             <p className="mb-1"><span className="font-bold w-24 inline-block">Name:</span> {user.name}</p>
                                             <p className="mb-1"><span className="font-bold w-24 inline-block">Reg No:</span> {user.id}</p>
-                                            <p className="mb-1"><span className="font-bold w-24 inline-block">Progam:</span> B.Tech / B.E</p>
+                                            <p className="mb-1"><span className="font-bold w-24 inline-block">Progam:</span> B.Tech</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="mb-1"><span className="font-bold">Semester:</span> <span className="uppercase">{selectedSem.semester}</span></p>
                                             <p className="mb-1"><span className="font-bold">Date:</span> {new Date().toLocaleDateString()}</p>
                                         </div>
                                     </div>
-
                                     <table className="w-full border-collapse border border-gray-900 font-serif text-sm mb-8">
                                         <thead className="bg-gray-100">
                                             <tr>
@@ -224,14 +227,12 @@
                                             ))}
                                         </tbody>
                                     </table>
-
                                     <div className="flex justify-end">
                                         <div className="border border-gray-900 p-2 px-6 bg-gray-50 text-center">
                                             <span className="block text-xs uppercase font-bold text-gray-500">SGPA</span>
                                             <span className="text-2xl font-bold font-serif">{selectedSem.gpa}</span>
                                         </div>
                                     </div>
-
                                     <div className="absolute bottom-10 left-10 right-10 flex justify-between border-t border-gray-300 pt-4 font-serif text-xs text-gray-500">
                                         <p>This is a computer generated document.</p>
                                         <p className="font-bold text-black">Controller of Examinations</p>
