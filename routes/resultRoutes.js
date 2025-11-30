@@ -22,6 +22,7 @@ router.post('/bulk', async (req, res) => {
         for (const row of rows) {
             if (!row.studentId) continue;
 
+            // Upsert User
             const userData = {
                 username: row.studentId,
                 name: row.studentName,
@@ -36,7 +37,7 @@ router.post('/bulk', async (req, res) => {
                 { upsert: true, new: true }
             );
 
-            // SGPA Calc
+            // SGPA Calculation
             const getGradePoint = (g) => {
                 g = g ? g.toUpperCase().trim() : '';
                 if(g==='O') return 10; if(g==='A+') return 9; if(g==='A') return 8;
@@ -52,6 +53,7 @@ router.post('/bulk', async (req, res) => {
             });
             const sgpa = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
 
+            // Overwrite results
             await Result.deleteMany({ studentId: row.studentId, semester: row.semester });
             
             await Result.create({
@@ -68,14 +70,13 @@ router.post('/bulk', async (req, res) => {
     }
 });
 
-// 3. SMART DELETE (Handles Name OR Semester)
+// 3. SMART DELETE (Fixes "Delete Failed")
 router.delete('/delete-any', async (req, res) => {
     try {
         const { query } = req.body;
         if (!query) return res.status(400).json({ message: "Input required" });
 
         // A. Try Deleting by SEMESTER first
-        // (Deletes results, keeps student accounts)
         const semDelete = await Result.deleteMany({ semester: query });
         
         if (semDelete.deletedCount > 0) {
@@ -83,7 +84,6 @@ router.delete('/delete-any', async (req, res) => {
         }
 
         // B. If no semester matched, Try Deleting by STUDENT NAME
-        // (Deletes user account AND their results)
         const users = await User.find({ name: query, role: 'student' });
         
         if (users.length > 0) {
@@ -93,7 +93,7 @@ router.delete('/delete-any', async (req, res) => {
                 await User.findByIdAndDelete(user._id); // Delete user
                 deletedUsers++;
             }
-            return res.json({ message: `👤 Deleted ${deletedUsers} student(s) named '${query}' and their data.` });
+            return res.json({ message: `👤 Deleted ${deletedUsers} student(s) named '${query}'.` });
         }
 
         return res.status(404).json({ message: `No Semester or Student found matching '${query}'.` });

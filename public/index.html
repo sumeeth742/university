@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>University Result Portal</title>
     <link rel="icon" href="data:,">
-    
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -26,7 +26,7 @@
         const { useState, useEffect } = React;
         const API_URL = "/api"; 
 
-        // ICONS
+        // --- ICONS (Hardcoded to prevent Vercel crashes) ---
         const ICONS = {
             Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
             UploadCloud: <g><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></g>,
@@ -40,7 +40,7 @@
             </svg>
         );
 
-        // LOGIN
+        // --- LOGIN COMPONENT ---
         const Login = ({ onLogin }) => {
             const [role, setRole] = useState('student');
             const [username, setUsername] = useState('');
@@ -49,7 +49,7 @@
 
             const handleLogin = async (e) => {
                 e.preventDefault();
-                setMsg('');
+                setMsg('Verifying...');
                 try {
                     const res = await fetch(`${API_URL}/auth/login`, {
                         method: 'POST',
@@ -83,7 +83,7 @@
             );
         };
 
-        // ADMIN DASHBOARD
+        // --- ADMIN DASHBOARD ---
         const AdminDashboard = ({ user, onLogout }) => {
             const [status, setStatus] = useState('');
             const [deleteInput, setDeleteInput] = useState('');
@@ -95,7 +95,7 @@
                 reader.onload = async (ev) => {
                     const lines = ev.target.result.split('\n');
                     const groupedData = {};
-                    // CSV: ID, Name, DOB, Sem, Sub, Code, Grade, Crd
+                    // CSV: ID, Name, DOB, Sem, Sub, Code, Grade, Crd (8 Columns)
                     for (let i = 1; i < lines.length; i++) {
                         const row = lines[i].split(',');
                         if (row.length < 8) continue;
@@ -121,10 +121,10 @@
                 reader.readAsText(file);
             };
 
-            // SMART DELETE FUNCTION
+            // SMART DELETE FUNCTION (Name or Semester)
             const handleDelete = async () => {
                 if(!deleteInput) return;
-                if(!confirm(`Are you sure you want to delete "${deleteInput}"?`)) return;
+                if(!confirm(`Are you sure you want to delete data for "${deleteInput}"?`)) return;
                 
                 try {
                     const res = await fetch(`${API_URL}/results/delete-any`, {
@@ -143,16 +143,18 @@
                     <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button></div>
                     
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                        {/* UPLOAD */}
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
                             <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
                             <h2 className="text-xl font-bold mb-2">Upload Results</h2>
                             <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                 <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
-                                <p className="text-xs text-gray-400 mt-2">Format: ID, Name, DOB, Sem, Sub, Code, Grade, Crd</p>
+                                <p className="text-xs text-gray-400 mt-2">Format: ID, Name, DOB, Sem, Sub, Code, Grd, Crd</p>
                             </div>
                         </div>
 
+                        {/* DELETE */}
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
                             <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
                             <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
@@ -168,7 +170,7 @@
             );
         };
 
-        // STUDENT DASHBOARD
+        // --- STUDENT DASHBOARD ---
         const StudentDashboard = ({ user, onLogout }) => {
             const [allResults, setAllResults] = useState([]);
             const [selectedSem, setSelectedSem] = useState(null);
