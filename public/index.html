@@ -86,7 +86,7 @@
         // ADMIN DASHBOARD
         const AdminDashboard = ({ user, onLogout }) => {
             const [status, setStatus] = useState('');
-            const [deleteName, setDeleteName] = useState('');
+            const [deleteInput, setDeleteInput] = useState('');
 
             const handleUpload = (e) => {
                 const file = e.target.files[0];
@@ -121,19 +121,19 @@
                 reader.readAsText(file);
             };
 
-            // DELETE BY NAME FUNCTION
+            // SMART DELETE FUNCTION
             const handleDelete = async () => {
-                if(!deleteName) return;
-                if(!confirm(`⚠️ Are you sure you want to delete ALL data for student "${deleteName}"? This cannot be undone.`)) return;
+                if(!deleteInput) return;
+                if(!confirm(`Are you sure you want to delete "${deleteInput}"?`)) return;
                 
                 try {
-                    const res = await fetch(`${API_URL}/results/delete-student`, {
+                    const res = await fetch(`${API_URL}/results/delete-any`, {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: deleteName })
+                        body: JSON.stringify({ query: deleteInput })
                     });
                     const d = await res.json();
-                    if(res.ok) setStatus(`🗑️ ${d.message}`);
+                    if(res.ok) setStatus(d.message);
                     else setStatus(`❌ ${d.message}`);
                 } catch(err) { setStatus("❌ Delete Failed"); }
             };
@@ -143,24 +143,22 @@
                     <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button></div>
                     
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-                        {/* UPLOAD SECTION */}
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
                             <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
                             <h2 className="text-xl font-bold mb-2">Upload Results</h2>
                             <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                 <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
-                                <p className="text-xs text-gray-400 mt-2">Format: ID, Name, DOB, Sem, Sub, Code, Grd, Crd</p>
+                                <p className="text-xs text-gray-400 mt-2">Format: ID, Name, DOB, Sem, Sub, Code, Grade, Crd</p>
                             </div>
                         </div>
 
-                        {/* DELETE SECTION */}
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
                             <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
-                            <h2 className="text-xl font-bold mb-2">Delete Student</h2>
-                            <p className="text-sm text-gray-500 mb-4">Enter Student Name (e.g. Alice Smith)</p>
+                            <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
+                            <p className="text-sm text-gray-500 mb-4">Enter <b>Student Name</b> OR <b>Semester Name</b></p>
                             <div className="flex gap-2">
-                                <input className="border p-2 rounded w-full" placeholder='Full Name' value={deleteName} onChange={e=>setDeleteName(e.target.value)} />
+                                <input className="border p-2 rounded w-full" placeholder='e.g. "Alice Smith" or "Fall 2024"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} />
                                 <button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button>
                             </div>
                         </div>
