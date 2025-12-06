@@ -7,12 +7,17 @@ const jwt = require('jsonwebtoken');
 // LOGIN ROUTE
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        let { username, password } = req.body;
+
+        // Sanitize input
+        if (username) {
+            username = username.toString().toUpperCase().replace(/\s+/g, '');
+        }
+
         const user = await User.findOne({ username });
 
         if (!user) return res.status(400).json({ message: "User not found" });
 
-        // Check Password
         let isMatch = false;
         
         if (user.role === 'admin') {
@@ -20,16 +25,22 @@ router.post('/login', async (req, res) => {
             isMatch = await bcrypt.compare(password, user.password);
         } else {
             // Student: Check Direct String (DOB)
-            // Note: In this system, student passwords (DOB) are stored as plain text for easy CSV matching
-            isMatch = (user.password === password);
+            isMatch = (user.password.trim() === password.trim());
         }
 
         if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });
 
         // Generate Token
-        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
 
-        res.json({ token, id: user.username, name: user.name, role: user.role });
+        // FIX: Added 'department' to the response so Frontend can display Branch
+        res.json({ 
+            token, 
+            id: user.username, 
+            name: user.name, 
+            role: user.role,
+            department: user.department 
+        });
 
     } catch (error) {
         console.error("Login Error:", error);
