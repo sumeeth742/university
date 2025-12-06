@@ -17,17 +17,16 @@
             .print-border { border: 2px solid black !important; }
             body { background: white; -webkit-print-color-adjust: exact; }
         }
-        .university-header { border-left: 5px solid #b91c1c; } /* Red border style */
     </style>
 </head>
-<body class="bg-gray-50 text-slate-800 font-sans">
+<body class="bg-slate-100 text-slate-800 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
         const API_URL = "/api"; 
 
-        // --- ICONS ---
+        // ICONS
         const ICONS = {
             Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
             UploadCloud: <g><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></g>,
@@ -92,44 +91,38 @@
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center bg-sky-900 p-4">
-                    <div className="bg-white p-10 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-sky-600">
-                        <div className="flex bg-gray-100 p-1 rounded-lg mb-8">
-                            <button onClick={() => {setRole('student'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'student' ? 'bg-white shadow text-sky-700' : 'text-gray-400'}`}>Student</button>
-                            <button onClick={() => {setRole('admin'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'admin' ? 'bg-white shadow text-sky-700' : 'text-gray-400'}`}>Admin</button>
+                <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+                    <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+                        <div className="flex bg-gray-100 p-1 rounded mb-6">
+                            <button onClick={() => {setRole('student'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'student' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Student</button>
+                            <button onClick={() => {setRole('admin'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'admin' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Admin</button>
                         </div>
-                        
-                        <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
-                            {role === 'student' ? 'Student Login' : 'Admin Portal'}
-                        </h2>
-                        <p className="text-center text-gray-400 text-xs mb-6 uppercase tracking-widest">University Result System</p>
-                        
-                        {msg && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm border border-red-200 font-bold text-center">{msg}</div>}
-                        
-                        <form onSubmit={handleLogin} className="space-y-6">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{role === 'student' ? "USN Number" : "Username"}</label>
-                                <input className="w-full border p-3 rounded bg-gray-50 focus:ring-2 focus:ring-sky-500 outline-none transition" 
-                                    placeholder={role === 'student' ? "e.g. 3BR23CS001" : "Admin ID"} 
+                        <h2 className="text-2xl font-bold text-center mb-6">University Portal</h2>
+                        {msg && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm border border-red-200 font-bold">{msg}</div>}
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase">{role === 'student' ? "USN" : "Username"}</label>
+                                <input className="w-full border p-3 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+                                    placeholder={role === 'student' ? "Enter USN" : "Enter Username"} 
                                     value={username} onChange={e=>setUsername(e.target.value)} required />
                             </div>
 
                             {role === 'student' ? (
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth</label>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Date of Birth</label>
                                     <div className="flex gap-2">
-                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-sky-500" value={day} onChange={e=>setDay(e.target.value)} required><option value="">Day</option>{days.map(d => <option key={d} value={d}>{d}</option>)}</select>
-                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-sky-500" value={month} onChange={e=>setMonth(e.target.value)} required><option value="">Month</option>{months.map(m => <option key={m} value={m}>{m}</option>)}</select>
-                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-sky-500" value={year} onChange={e=>setYear(e.target.value)} required><option value="">Year</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-blue-500" value={day} onChange={e=>setDay(e.target.value)} required><option value="">Day</option>{days.map(d => <option key={d} value={d}>{d}</option>)}</select>
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-blue-500" value={month} onChange={e=>setMonth(e.target.value)} required><option value="">Month</option>{months.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none focus:ring-2 focus:ring-blue-500" value={year} onChange={e=>setYear(e.target.value)} required><option value="">Year</option>{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
                                     </div>
                                 </div>
                             ) : (
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
-                                    <input type="password" className="w-full border p-3 rounded bg-gray-50 outline-none focus:ring-2 focus:ring-sky-500" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-500 uppercase">Password</label>
+                                    <input type="password" className="w-full border p-3 rounded bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Password" value={password} onChange={e=>setPassword(e.target.value)} required />
                                 </div>
                             )}
-                            <button className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 rounded-lg transition shadow-lg text-sm uppercase tracking-wide">Login</button>
+                            <button className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded transition shadow-lg">LOGIN</button>
                         </form>
                     </div>
                 </div>
@@ -189,22 +182,22 @@
 
             return (
                 <div className="min-h-screen bg-slate-50 p-4 md:p-10">
-                    <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center text-slate-700"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold hover:bg-slate-300">Logout</button></div>
+                    <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold">Logout</button></div>
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
-                            <div className="mb-4 inline-block p-4 bg-sky-50 rounded-full text-sky-600"><Icon name="UploadCloud" size={40}/></div>
-                            <h2 className="text-xl font-bold mb-2 text-slate-800">Upload Results</h2>
-                            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-sky-50 transition mt-4">
+                            <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
+                            <h2 className="text-xl font-bold mb-2">Upload Results</h2>
+                            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                                <p className="font-bold text-slate-600 group-hover:text-sky-600">Select CSV File</p>
+                                <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
                                 <p className="text-xs text-gray-400 mt-2">Format: USN, Name, DOB, Sem, Sub, Code, Grd, Crd</p>
                             </div>
                         </div>
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200">
                             <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
-                            <h2 className="text-xl font-bold mb-2 text-slate-800">Clean Up Data</h2>
+                            <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
                             <p className="text-sm text-gray-500 mb-4">Enter <b>USN</b>, <b>Name</b> or <b>Semester</b></p>
-                            <div className="flex gap-2"><input className="border p-2 rounded w-full outline-none focus:ring-2 focus:ring-red-200" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button></div>
+                            <div className="flex gap-2"><input className="border p-2 rounded w-full" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={handleDelete} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Delete</button></div>
                         </div>
                     </div>
                     {status && <div className="mt-8 p-4 bg-slate-800 text-white rounded font-bold text-center max-w-xl mx-auto shadow-lg">{status}</div>}
@@ -212,7 +205,7 @@
             );
         };
 
-        // --- STUDENT DASHBOARD (UNIVERSITY STYLE) ---
+        // --- STUDENT DASHBOARD (WITH CUMULATIVE CGPA LOGIC) ---
         const StudentDashboard = ({ user, onLogout }) => {
             const [allResults, setAllResults] = useState([]);
             const [selectedSem, setSelectedSem] = useState(null);
@@ -230,15 +223,34 @@
                 return map[dept] || dept + " ENGINEERING";
             };
 
+            const getSemNumber = (semName) => {
+                // Extract number from "Semester 1" -> 1
+                const matches = semName.match(/(\d+)/);
+                return matches ? parseInt(matches[0]) : 0;
+            };
+
             useEffect(() => {
                 fetch(`${API_URL}/results/${user.id}`).then(r => r.json()).then(data => {
-                    setAllResults(data);
-                    if(data.length > 0) handleSemChange(data[0], data); // Load first sem by default
+                    // Sort results by Semester Number
+                    const sortedData = data.sort((a, b) => getSemNumber(a.semester) - getSemNumber(b.semester));
+                    setAllResults(sortedData);
+                    
+                    // Default to latest semester
+                    if(sortedData.length > 0) {
+                        const latest = sortedData[sortedData.length - 1];
+                        // Find the index of latest sem in the sorted array
+                        const index = sortedData.findIndex(s => s._id === latest._id);
+                        handleSemChange(index, sortedData); 
+                    }
                 });
             }, [user.id]);
 
-            const handleSemChange = (semData, fullData = allResults) => {
+            const handleSemChange = (semIndex, fullData = allResults) => {
+                if (semIndex < 0 || semIndex >= fullData.length) return;
+                
+                const semData = fullData[semIndex];
                 setSelectedSem(semData);
+                const currentSemNum = getSemNumber(semData.semester);
                 
                 // 1. Semester Stats
                 let semCreditsReg = 0;
@@ -252,19 +264,20 @@
                     }
                 });
 
-                // 2. CGPA Calculation (Weighted Average up to ALL semesters)
+                // 2. CGPA Calculation (Cumulative up to selected semester)
                 let totalPoints = 0;
                 let totalCredits = 0;
                 
                 fullData.forEach(s => {
-                    // Only count semesters up to the selected one (optional, but usually CGPA is cumulative)
-                    // Here we calculate CGPA based on ALL data available.
-                    s.subjects.forEach(sub => {
-                        const pts = getGradePoint(sub.grade);
-                        const crd = Number(sub.credits);
-                        totalPoints += (pts * crd);
-                        totalCredits += crd;
-                    });
+                    // Only include semesters <= selected semester for CGPA calculation
+                    if (getSemNumber(s.semester) <= currentSemNum) {
+                        s.subjects.forEach(sub => {
+                            const pts = getGradePoint(sub.grade);
+                            const crd = Number(sub.credits);
+                            totalPoints += (pts * crd);
+                            totalCredits += crd;
+                        });
+                    }
                 });
 
                 const finalCGPA = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
@@ -283,7 +296,9 @@
                         <h1 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icon name="GraduationCap"/> STUDENT PORTAL</h1>
                         <div className="flex gap-4">
                             <select className="border p-2 rounded bg-gray-50 text-sm font-bold outline-none cursor-pointer hover:bg-gray-100" 
-                                onChange={(e) => handleSemChange(allResults[e.target.value])}>
+                                onChange={(e) => handleSemChange(e.target.value)}
+                                value={selectedSem ? allResults.findIndex(s => s.semester === selectedSem.semester) : 0}
+                            >
                                 {allResults.map((sem, index) => <option key={index} value={index}>{sem.semester}</option>)}
                             </select>
                             <button onClick={onLogout} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded hover:bg-red-100 border border-red-200">LOGOUT</button>
@@ -293,7 +308,7 @@
                     {allResults.length === 0 ? <div className="text-center text-gray-400 mt-20">No records found.</div> : (
                         <div className="max-w-5xl mx-auto bg-white shadow-xl min-h-[800px] relative print-border">
                             
-                            {/* TOP 4 BOXES (Credits, SGPA, CGPA) */}
+                            {/* TOP 4 BOXES */}
                             {selectedSem && (
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-8 border-b bg-gray-50">
                                     <div className="bg-white p-4 border-l-4 border-red-600 shadow-sm">
