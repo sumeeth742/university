@@ -3,6 +3,18 @@ const router = express.Router();
 const Result = require('../models/Result');
 const User = require('../models/User');
 
+// --- HELPER: Fix Date Format to YYYY-MM-DD ---
+// This fixes the issue where Excel saves as "5/20/2002" but you want "2002-05-20"
+const formatDate = (dateString) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) return dateString; // Return original if we can't parse it
+    
+    // Convert to YYYY-MM-DD
+    return date.toISOString().split('T')[0];
+};
+
 // 1. GET RESULTS
 router.get('/:usn', async (req, res) => {
     try {
@@ -13,57 +25,51 @@ router.get('/:usn', async (req, res) => {
     }
 });
 
-// 2. BULK UPLOAD (With Sanitization Fix)
+// 2. BULK UPLOAD (With Date Fixing)
 router.post('/bulk', async (req, res) => {
     try {
         const rows = req.body; 
-        let count = 0;
-        let skipped = 0;
+        let successCount = 0;
         let errors = [];
 
-        // STRICT FORMAT: 3BR + 2 Digits + 2 Letters + 3 Digits
-        const usnRegex = /^3BR\d{2}[A-Z]{2}\d{3}$/; 
+        const usnRegex = /^3BR\d{2}[A-Z]{2}\d{3}$/i; 
 
         for (const row of rows) {
             let rawUsn = row.usn; 
             if (!rawUsn) continue;
 
-            // --- FIX 1: SANITIZE INPUT ---
-            // Remove spaces, convert to uppercase (e.g. "3br 23 cs 001" -> "3BR23CS001")
             const usn = rawUsn.toString().toUpperCase().replace(/\s+/g, '');
 
-            // --- RULE 1: VALIDATE USN FORMAT ---
-            if (!usnRegex.test(usn)) {
-                console.log(`⚠️ Skipped ${usn}: Invalid Format`);
-                errors.push(`Invalid USN: '${rawUsn}' -> cleaned to '${usn}'`);
-                skipped++;
-                continue;
-            }
-
-            // --- RULE 2: VALIDATE AGE (Must be >= 17) ---
-            if (row.dob) {
-                const birthDate = new Date(row.dob);
-                const today = new Date();
-                let age = today.getFullYear() - birthDate.getFullYear();
-                const m = today.getMonth() - birthDate.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-
-                if (age < 17) {
-                    errors.push(`${usn}: Student too young (${age} yrs). Min 17.`);
-                    skipped++;
-                    continue; 
-                }
-            }
-
             try {
-                // --- ACCOUNT CREATION ---
+                // RULE 1: VALIDATE FORMAT
+                if (!usnRegex.test(usn)) throw new Error(`Invalid USN Format: '${rawUsn}'`);
+
+                // RULE 2: FIX & VALIDATE DATE
+                let cleanDOB = null;
+                if (row.dob) {
+                    // FIX: Convert whatever is in CSV to YYYY-MM-DD
+                    cleanDOB = formatDate(row.dob); 
+
+                    // Age Check
+                    const birthDate = new Date(cleanDOB);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+
+                    if (age < 17) throw new Error(`Student too young (${age} yrs). Min 17.`);
+                }
+
+                // UPSERT USER
                 const userData = {
                     username: usn,
                     name: row.studentName || "Unknown",
                     role: 'student',
-                    department: usn.substring(5, 7) // Extract 'CS' or 'EC'
+                    department: usn.substring(5, 7)
                 };
-                if (row.dob) userData.password = row.dob;
+                
+                // FORCE UPDATE PASSWORD WITH CLEAN DATE
+                if (cleanDOB) userData.password = cleanDOB;
 
                 await User.findOneAndUpdate(
                     { username: usn },
@@ -71,7 +77,7 @@ router.post('/bulk', async (req, res) => {
                     { upsert: true, new: true }
                 );
 
-                // --- SGPA CALCULATION ---
+                // CALCULATE SGPA
                 const getGradePoint = (g) => {
                     g = g ? g.toUpperCase().trim() : '';
                     if(g==='O') return 10; if(g==='A+') return 9; if(g==='A') return 8;
@@ -89,27 +95,26 @@ router.post('/bulk', async (req, res) => {
 
                 // SAVE RESULT
                 await Result.deleteMany({ studentId: usn, semester: row.semester });
-                
                 await Result.create({
                     studentId: usn,
                     semester: row.semester,
                     gpa: sgpa,
                     subjects: row.subjects
                 });
-                count++;
+                successCount++;
 
-            } catch (innerError) {
-                errors.push(`${usn}: Database Error - ${innerError.message}`);
+            } catch (rowError) {
+                errors.push(`${usn}: ${rowError.message}`);
             }
         }
 
-        let message = `Processed ${count} records.`;
-        if (errors.length > 0) message += ` Errors: ${errors.length} (Check list).`;
-        
-        res.status(201).json({ message, errors });
+        res.status(200).json({ 
+            message: `Processed ${successCount}/${rows.length} records.`, 
+            errors: errors 
+        });
 
     } catch (error) {
-        res.status(500).json({ message: "Upload Error: " + error.message });
+        res.status(500).json({ message: "Critical Server Error: " + error.message });
     }
 });
 
@@ -119,16 +124,14 @@ router.delete('/delete-any', async (req, res) => {
         const { query } = req.body;
         if (!query) return res.status(400).json({ message: "Input required" });
 
-        // Normalize input if it looks like a USN
-        const cleanQuery = query.trim().toUpperCase();
+        const cleanQuery = query.trim();
+        const upperQuery = cleanQuery.toUpperCase();
 
-        // 1. Delete by Semester
-        const semDelete = await Result.deleteMany({ semester: query });
-        if (semDelete.deletedCount > 0) return res.json({ message: `🗑️ Deleted ${semDelete.deletedCount} records for '${query}'.` });
+        const semDelete = await Result.deleteMany({ semester: cleanQuery });
+        if (semDelete.deletedCount > 0) return res.json({ message: `🗑️ Deleted ${semDelete.deletedCount} records for '${cleanQuery}'.` });
 
-        // 2. Delete by Name or USN
         const users = await User.find({ 
-            $or: [{ name: query }, { username: cleanQuery }], 
+            $or: [{ name: cleanQuery }, { username: upperQuery }], 
             role: 'student' 
         });
         
@@ -139,10 +142,10 @@ router.delete('/delete-any', async (req, res) => {
                 await User.findByIdAndDelete(user._id);
                 deletedUsers++;
             }
-            return res.json({ message: `👤 Deleted ${deletedUsers} student(s) matching '${query}'.` });
+            return res.json({ message: `👤 Deleted ${deletedUsers} student(s) matching '${cleanQuery}'.` });
         }
 
-        return res.status(404).json({ message: `No data found matching '${query}'.` });
+        return res.status(404).json({ message: `No data found matching '${cleanQuery}'.` });
 
     } catch (error) {
         res.status(500).json({ message: "Server Error" });
