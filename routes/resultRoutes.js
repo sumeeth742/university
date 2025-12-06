@@ -3,16 +3,20 @@ const router = express.Router();
 const Result = require('../models/Result');
 const User = require('../models/User');
 
-// --- HELPER: Fix Date Format to YYYY-MM-DD ---
-// This fixes the issue where Excel saves as "5/20/2002" but you want "2002-05-20"
+// --- HELPER: FORCE DATE TO YYYY-MM-DD ---
 const formatDate = (dateString) => {
     if (!dateString) return null;
-    const date = new Date(dateString);
-    // Check if date is valid
-    if (isNaN(date.getTime())) return dateString; // Return original if we can't parse it
     
-    // Convert to YYYY-MM-DD
-    return date.toISOString().split('T')[0];
+    // Handle standard JavaScript Date parsing
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Return original if parsing fails
+    
+    // Format to YYYY-MM-DD manually to avoid timezone shifts
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
 };
 
 // 1. GET RESULTS
@@ -25,7 +29,7 @@ router.get('/:usn', async (req, res) => {
     }
 });
 
-// 2. BULK UPLOAD (With Date Fixing)
+// 2. BULK UPLOAD (With Date Fixer)
 router.post('/bulk', async (req, res) => {
     try {
         const rows = req.body; 
@@ -44,10 +48,10 @@ router.post('/bulk', async (req, res) => {
                 // RULE 1: VALIDATE FORMAT
                 if (!usnRegex.test(usn)) throw new Error(`Invalid USN Format: '${rawUsn}'`);
 
-                // RULE 2: FIX & VALIDATE DATE
+                // RULE 2: FIX DATE & VALIDATE AGE
                 let cleanDOB = null;
                 if (row.dob) {
-                    // FIX: Convert whatever is in CSV to YYYY-MM-DD
+                    // FIX: Force convert to YYYY-MM-DD
                     cleanDOB = formatDate(row.dob); 
 
                     // Age Check
@@ -68,7 +72,7 @@ router.post('/bulk', async (req, res) => {
                     department: usn.substring(5, 7)
                 };
                 
-                // FORCE UPDATE PASSWORD WITH CLEAN DATE
+                // CRITICAL: Update password with the CLEAN date
                 if (cleanDOB) userData.password = cleanDOB;
 
                 await User.findOneAndUpdate(
