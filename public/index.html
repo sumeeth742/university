@@ -40,47 +40,50 @@
             </svg>
         );
 
-        // LOGIN
+        // --- LOGIN COMPONENT (With Day/Month/Year Dropdowns) ---
         const Login = ({ onLogin }) => {
             const [role, setRole] = useState('student');
             const [username, setUsername] = useState('');
-            const [password, setPassword] = useState('');
+            
+            // Separate states for dropdowns
+            const [day, setDay] = useState('');
+            const [month, setMonth] = useState('');
+            const [year, setYear] = useState('');
+            
+            const [password, setPassword] = useState(''); // For Admin only
             const [msg, setMsg] = useState('');
 
-            const validateAge = (dobString) => {
-                const dob = new Date(dobString);
-                const today = new Date();
-                let age = today.getFullYear() - dob.getFullYear();
-                const m = today.getMonth() - dob.getMonth();
-                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-                    age--;
-                }
-                return age;
-            };
+            // Generate Arrays for Dropdowns
+            const days = Array.from({length: 31}, (_, i) => i + 1);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const currentYear = new Date().getFullYear();
+            const years = Array.from({length: currentYear - 1989}, (_, i) => currentYear - i); // 2025 down to 1990
 
             const handleLogin = async (e) => {
                 e.preventDefault();
-                setMsg('');
+                setMsg('Verifying...');
+                
+                let finalPassword = password;
 
+                // Combine Dropdowns into YYYY-MM-DD for Student
                 if (role === 'student') {
-                    // 1. Date Format Check
-                    if (!/^\d{4}-\d{2}-\d{2}$/.test(password)) {
-                        setMsg("❌ Invalid Date. Use YYYY-MM-DD");
+                    if (!day || !month || !year) {
+                        setMsg("❌ Please select Day, Month, and Year");
                         return;
                     }
-                    // 2. Age Check (17+)
-                    const age = validateAge(password);
-                    if (age < 17) {
-                        setMsg(`❌ Invalid: You are ${age} yrs old. Min age is 17.`);
-                        return;
-                    }
+                    // Convert Month Name to Number (01, 02...)
+                    const monthIndex = months.indexOf(month) + 1;
+                    const monthStr = monthIndex.toString().padStart(2, '0');
+                    const dayStr = day.toString().padStart(2, '0');
+                    
+                    finalPassword = `${year}-${monthStr}-${dayStr}`;
                 }
 
                 try {
                     const res = await fetch(`${API_URL}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username, password })
+                        body: JSON.stringify({ username, password: finalPassword })
                     });
                     const data = await res.json();
                     if (res.ok) {
@@ -94,22 +97,59 @@
                 <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
                     <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
                         <div className="flex bg-gray-100 p-1 rounded mb-6">
-                            <button onClick={() => {setRole('student'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'student' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Student</button>
-                            <button onClick={() => {setRole('admin'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'admin' ? 'bg-white shadow text-blue-700' : 'text-gray-400'}`}>Admin</button>
+                            <button onClick={() => {setRole('student'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'student' ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}>Student</button>
+                            <button onClick={() => {setRole('admin'); setMsg('')}} className={`flex-1 py-2 font-bold text-sm rounded transition ${role === 'admin' ? 'bg-blue-600 text-white shadow' : 'text-gray-500'}`}>Admin</button>
                         </div>
-                        <h2 className="text-2xl font-bold text-center mb-6">University Portal</h2>
+                        
+                        <h2 className="text-2xl font-bold text-center mb-6">
+                            {role === 'student' ? 'Login to Your Account' : 'Admin Portal'}
+                        </h2>
+                        
                         {msg && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm border border-red-200 font-bold">{msg}</div>}
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <input className="w-full border p-3 rounded" placeholder={role === 'student' ? "USN (e.g. 3BR23CS001)" : "Username"} value={username} onChange={e=>setUsername(e.target.value)} required />
-                            <input type={role === 'student' ? "text" : "password"} className="w-full border p-3 rounded" placeholder={role === 'student' ? "DOB (YYYY-MM-DD)" : "Password"} value={password} onChange={e=>setPassword(e.target.value)} required />
-                            <button className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded transition">Login</button>
+                        
+                        <form onSubmit={handleLogin} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-600 mb-1">{role === 'student' ? "USN" : "Username"}</label>
+                                <input className="w-full border p-3 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" 
+                                    placeholder={role === 'student' ? "Enter USN" : "Enter Username"} 
+                                    value={username} onChange={e=>setUsername(e.target.value)} required />
+                            </div>
+
+                            {role === 'student' ? (
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-600 mb-1">Date of Birth</label>
+                                    <div className="flex gap-2">
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none" value={day} onChange={e=>setDay(e.target.value)} required>
+                                            <option value="">Day</option>
+                                            {days.map(d => <option key={d} value={d}>{d}</option>)}
+                                        </select>
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none" value={month} onChange={e=>setMonth(e.target.value)} required>
+                                            <option value="">Month</option>
+                                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                                        </select>
+                                        <select className="border p-3 rounded bg-gray-50 w-1/3 outline-none" value={year} onChange={e=>setYear(e.target.value)} required>
+                                            <option value="">Year</option>
+                                            {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-600 mb-1">Password</label>
+                                    <input type="password" className="w-full border p-3 rounded bg-gray-50 outline-none" 
+                                        placeholder="Enter Password" 
+                                        value={password} onChange={e=>setPassword(e.target.value)} required />
+                                </div>
+                            )}
+
+                            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded transition shadow-lg">LOGIN</button>
                         </form>
                     </div>
                 </div>
             );
         };
 
-        // ADMIN DASHBOARD
+        // --- ADMIN DASHBOARD ---
         const AdminDashboard = ({ user, onLogout }) => {
             const [status, setStatus] = useState('');
             const [deleteInput, setDeleteInput] = useState('');
@@ -121,11 +161,15 @@
                 reader.onload = async (ev) => {
                     const lines = ev.target.result.split('\n');
                     const groupedData = {};
+                    
                     // CSV: USN, Name, DOB, Sem, Sub, Code, Grade, Crd
                     for (let i = 1; i < lines.length; i++) {
-                        const row = lines[i].split(',');
+                        const row = lines[i].split(',').map(x => x.trim().replace(/^"|"$/g, ''));
                         if (row.length < 8) continue;
-                        const [usn, name, dob, sem, sub, code, grd, crd] = row.map(x => x.trim());
+                        
+                        const [usn, name, dob, sem, sub, code, grd, crd] = row;
+                        if(!usn) continue;
+
                         const key = `${usn}-${sem}`;
                         if (!groupedData[key]) {
                             groupedData[key] = { usn: usn, studentName: name, dob: dob, semester: sem, subjects: [] };
@@ -148,8 +192,7 @@
             };
 
             const handleDelete = async () => {
-                if(!deleteInput) return;
-                if(!confirm(`Delete data for "${deleteInput}"?`)) return;
+                if(!deleteInput || !confirm(`Delete data for "${deleteInput}"?`)) return;
                 try {
                     const res = await fetch(`${API_URL}/results/delete-any`, {
                         method: 'DELETE',
@@ -157,8 +200,7 @@
                         body: JSON.stringify({ query: deleteInput })
                     });
                     const d = await res.json();
-                    if(res.ok) setStatus(d.message);
-                    else setStatus(`❌ ${d.message}`);
+                    if(res.ok) setStatus(d.message); else setStatus(`❌ ${d.message}`);
                 } catch(err) { setStatus("❌ Delete Failed"); }
             };
 
@@ -224,7 +266,7 @@
                                         <div>
                                             <p className="mb-1"><span className="font-bold w-24 inline-block">Name:</span> {user.name}</p>
                                             <p className="mb-1"><span className="font-bold w-24 inline-block">USN:</span> {user.id}</p>
-                                            <p className="mb-1"><span className="font-bold w-24 inline-block">Program:</span> {user.id.includes('CS') ? 'Comp. Science' : 'Electronics'}</p>
+                                            <p className="mb-1"><span className="font-bold w-24 inline-block">Program:</span> B.E / B.Tech</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="mb-1"><span className="font-bold">Semester:</span> <span className="uppercase">{selectedSem.semester}</span></p>
