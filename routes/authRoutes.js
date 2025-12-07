@@ -4,7 +4,9 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// LOGIN ROUTE
+// REGEX FOR USN (3BR + 2 Digits + 2 Letters + 3 Digits)
+const USN_REGEX = /^3BR\d{2}[A-Z]{2}\d{3}$/i;
+
 router.post('/login', async (req, res) => {
     try {
         let { username, password } = req.body;
@@ -14,6 +16,12 @@ router.post('/login', async (req, res) => {
             username = username.toString().toUpperCase().replace(/\s+/g, '');
         }
 
+        // BACKEND VALIDATION FOR STUDENT
+        // If it's not admin ('admin' doesn't match the regex) AND doesn't match regex -> Reject
+        if (username !== 'ADMIN' && !USN_REGEX.test(username)) {
+            return res.status(400).json({ message: "Invalid USN Format (Backend)" });
+        }
+
         const user = await User.findOne({ username });
 
         if (!user) return res.status(400).json({ message: "User not found" });
@@ -21,19 +29,15 @@ router.post('/login', async (req, res) => {
         let isMatch = false;
         
         if (user.role === 'admin') {
-            // Admin: Check Encrypted Password
             isMatch = await bcrypt.compare(password, user.password);
         } else {
-            // Student: Check Direct String (DOB)
             isMatch = (user.password.trim() === password.trim());
         }
 
         if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });
 
-        // Generate Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
 
-        // Send Department info so Frontend can display Branch Name
         res.json({ 
             token, 
             id: user.username, 
@@ -48,7 +52,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// --- RESTORED: GET ALL STUDENTS (For Admin Dashboard) ---
 router.get('/users', async (req, res) => {
     try {
         const users = await User.find({ role: 'student' }).select('username name password department batch');
