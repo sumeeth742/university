@@ -7,35 +7,50 @@ const jwt = require('jsonwebtoken');
 // REGEX FOR USN (3BR + 2 Digits + 2 Letters + 3 Digits)
 const USN_REGEX = /^3BR\d{2}[A-Z]{2}\d{3}$/i;
 
+// LOGIN ROUTE
 router.post('/login', async (req, res) => {
     try {
         let { username, password } = req.body;
 
-        // Sanitize input
-        if (username) {
-            username = username.toString().toUpperCase().replace(/\s+/g, '');
+        // 1. Sanitize Input (Remove spaces)
+        if (!username) return res.status(400).json({ message: "Username required" });
+        
+        let cleanUsername = username.trim();
+
+        // Special handling: If it looks like a student USN, make it uppercase
+        if (cleanUsername.toLowerCase() !== 'admin') {
+            cleanUsername = cleanUsername.toUpperCase().replace(/\s+/g, '');
+            
+            // --- STRICT VALIDATION WITH CLEAN MESSAGE ---
+            // This ensures only valid USNs can attempt to login
+            if (!USN_REGEX.test(cleanUsername)) {
+                return res.status(400).json({ message: "Invalid USN Format" });
+            }
+        } else {
+            cleanUsername = 'admin'; // Force lowercase for admin
         }
 
-        // BACKEND VALIDATION FOR STUDENT
-        // If it's not admin ('admin' doesn't match the regex) AND doesn't match regex -> Reject
-        if (username !== 'ADMIN' && !USN_REGEX.test(username)) {
-            return res.status(400).json({ message: "Invalid USN Format (Backend)" });
+        // 2. Find User in Database
+        const user = await User.findOne({ username: cleanUsername });
+
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
         }
 
-        const user = await User.findOne({ username });
-
-        if (!user) return res.status(400).json({ message: "User not found" });
-
+        // 3. Check Password
         let isMatch = false;
         
         if (user.role === 'admin') {
+            // Admin: Check Encrypted Password
             isMatch = await bcrypt.compare(password, user.password);
         } else {
+            // Student: Check Direct String (DOB)
             isMatch = (user.password.trim() === password.trim());
         }
 
         if (!isMatch) return res.status(400).json({ message: "Invalid Credentials" });
 
+        // 4. Generate Token
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
 
         res.json({ 
@@ -52,6 +67,7 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// GET ALL USERS (For Admin Dashboard)
 router.get('/users', async (req, res) => {
     try {
         const users = await User.find({ role: 'student' }).select('username name password department batch');
