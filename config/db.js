@@ -7,8 +7,9 @@ const connectDB = async () => {
     if (cached.conn) return cached.conn;
 
     if (!cached.promise) {
-        const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+        const uri = process.env.MONGO_URI;
         if (!uri) throw new Error("MONGO_URI missing");
+        
         cached.promise = mongoose.connect(uri).then((mongoose) => mongoose);
     }
     cached.conn = await cached.promise;

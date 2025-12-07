@@ -31,9 +31,10 @@ router.post('/login', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "Server Error" }); }
 });
 
+// Admin Tool: See registered students to check passwords
 router.get('/users', async (req, res) => {
     try {
-        const users = await User.find({ role: 'student' }).select('username name password department batch');
+        const users = await User.find({ role: 'student' }).select('username name password department');
         res.json(users);
     } catch (error) { res.status(500).json({ message: "Server Error" }); }
 });

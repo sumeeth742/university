@@ -14,16 +14,15 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// --- SMART PATH FINDER ---
+// --- SMART PATH FINDER (Fixes 500 Error) ---
 let publicPath = path.join(__dirname, 'public');
 if (!fs.existsSync(publicPath)) publicPath = path.join(process.cwd(), 'public');
 app.use(express.static(publicPath));
 
-// Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 
-// Seed Admin
+// Seed Admin Route
 app.get('/api/seed-admin', async (req, res) => {
     try {
         await connectDB();

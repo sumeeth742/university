@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
     batch: { type: Number },
 }, { timestamps: true });
 
+// CRASH FIX: Removed 'next' parameter
 userSchema.pre('save', function() {
     if (this.role === 'student' && this.username.length >= 7) {
         const yearShort = this.username.substring(3, 5);
