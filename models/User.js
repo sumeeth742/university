@@ -15,11 +15,16 @@ const userSchema = new mongoose.Schema({
     batch: { type: Number },
 }, { timestamps: true });
 
-// CRASH FIX: Removed 'next' parameter completely
+// --- CRASH FIX: Removed 'next' parameter ---
 userSchema.pre('save', function() {
-    if (this.role === 'student' && this.username.length >= 7) {
+    // Only run this logic for students
+    if (this.role === 'student' && this.username && this.username.length >= 7) {
+        // Extract Batch
         const yearShort = this.username.substring(3, 5);
-        if (!isNaN(yearShort)) this.batch = parseInt("20" + yearShort);
+        if (!isNaN(yearShort)) {
+            this.batch = parseInt("20" + yearShort);
+        }
+        // Extract Dept
         this.department = this.username.substring(5, 7);
     }
 });
