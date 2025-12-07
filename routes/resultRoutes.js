@@ -3,7 +3,7 @@ const router = express.Router();
 const Result = require('../models/Result');
 const User = require('../models/User');
 
-// --- HELPER: FORMAT DATE ---
+// --- HELPER: FORCE DATE TO YYYY-MM-DD ---
 const formatDate = (dateString) => {
     if (!dateString) return null;
     const date = new Date(dateString);
@@ -24,60 +24,60 @@ router.get('/:usn', async (req, res) => {
     }
 });
 
-// 2. BULK UPLOAD (Create User ONLY if new; Always upload Result)
+// 2. BULK UPLOAD (With Case-Insensitive Fix)
 router.post('/bulk', async (req, res) => {
     try {
         const rows = req.body; 
         let successCount = 0;
         let errors = [];
-        let newStudents = 0;
 
+        // Regex checks format (Case insensitive just in case, but we force Upper later)
         const usnRegex = /^3BR\d{2}[A-Z]{2}\d{3}$/i; 
 
         for (const row of rows) {
             let rawUsn = row.usn; 
             if (!rawUsn) continue;
 
-            // Sanitize USN
+            // --- THE FIX: FORCE UPPERCASE & REMOVE SPACES ---
+            // "3br 23 cs 001" -> "3BR23CS001"
             const usn = rawUsn.toString().toUpperCase().replace(/\s+/g, '');
 
             try {
-                // --- STEP 1: CHECK IF STUDENT EXISTS ---
-                const existingUser = await User.findOne({ username: usn });
+                // RULE 1: VALIDATE FORMAT
+                if (!usnRegex.test(usn)) throw new Error(`Invalid USN Format: '${rawUsn}'`);
 
-                if (!existingUser) {
-                    // === REGISTER NEW STUDENT ===
-                    
-                    // 1. Validate Format
-                    if (!usnRegex.test(usn)) throw new Error(`Invalid USN Format: '${rawUsn}'`);
-
-                    // 2. Validate DOB & Age
-                    if (!row.dob) throw new Error(`New student ${usn} requires DOB.`);
-                    
-                    const cleanDOB = formatDate(row.dob);
+                // RULE 2: FIX DATE & VALIDATE AGE
+                let cleanDOB = null;
+                if (row.dob) {
+                    cleanDOB = formatDate(row.dob); 
                     const birthDate = new Date(cleanDOB);
                     const today = new Date();
                     let age = today.getFullYear() - birthDate.getFullYear();
                     const m = today.getMonth() - birthDate.getMonth();
                     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
 
-                    if (age < 17) throw new Error(`Student under 17 years old.`);
+                    if (age < 17) throw new Error(`Student too young (${age} yrs). Min 17.`);
+                }
 
-                    // 3. Create Account
+                // --- CHECK IF STUDENT EXISTS ---
+                const existingUser = await User.findOne({ username: usn });
+
+                if (!existingUser) {
+                    // === REGISTER NEW STUDENT ===
+                    if (!row.dob) throw new Error(`New student ${usn} requires DOB.`);
+
+                    // Create Account (USN is already Uppercase here)
                     await User.create({
-                        username: usn,
+                        username: usn, 
                         name: row.studentName || "Unknown",
                         password: cleanDOB, // Set initial password
                         role: 'student',
                         department: usn.substring(5, 7)
                     });
-                    newStudents++;
                 } 
-                // IF STUDENT EXISTS: Do nothing to User table. Keep old password/name.
+                // If existing, we DO NOT update the password/name to prevent overwrites.
 
-                // --- STEP 2: PROCESS RESULTS (Always do this) ---
-                
-                // Calculate SGPA
+                // --- CALCULATE SGPA ---
                 const getGradePoint = (g) => {
                     g = g ? g.toUpperCase().trim() : '';
                     if(g==='O') return 10; if(g==='A+') return 9; if(g==='A') return 8;
@@ -93,7 +93,8 @@ router.post('/bulk', async (req, res) => {
                 });
                 const sgpa = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
 
-                // Save Result (Overwrite existing semester result if any)
+                // --- SAVE RESULT ---
+                // We delete old results for this semester to avoid duplicates
                 await Result.deleteMany({ studentId: usn, semester: row.semester });
                 
                 await Result.create({
@@ -110,7 +111,7 @@ router.post('/bulk', async (req, res) => {
         }
 
         res.status(200).json({ 
-            message: `Processed ${successCount} results. Registered ${newStudents} new students.`, 
+            message: `Processed ${successCount} results. Errors: ${errors.length}`, 
             errors: errors 
         });
 
