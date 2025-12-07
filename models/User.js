@@ -15,12 +15,16 @@ const userSchema = new mongoose.Schema({
     batch: { type: Number },
 }, { timestamps: true });
 
-// --- FIX: Removed 'next' to prevent Vercel 500 Error ---
+// --- CRASH FIX: Removed 'next' parameter ---
 userSchema.pre('save', function() {
+    // Only run this logic for students
     if (this.role === 'student' && this.username && this.username.length >= 7) {
-        // Auto-extract Batch & Dept from USN (e.g. 3BR23CS001)
+        // Extract Batch
         const yearShort = this.username.substring(3, 5);
-        if (!isNaN(yearShort)) this.batch = parseInt("20" + yearShort);
+        if (!isNaN(yearShort)) {
+            this.batch = parseInt("20" + yearShort);
+        }
+        // Extract Dept
         this.department = this.username.substring(5, 7);
     }
 });
