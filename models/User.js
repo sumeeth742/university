@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true, uppercase: true, trim: true }, 
+    username: { 
+        type: String, 
+        required: true, 
+        unique: true, 
+        uppercase: true, 
+        trim: true 
+    }, 
     password: { type: String, required: true },
     name: { type: String, required: true },
     role: { type: String, enum: ['admin', 'student'], default: 'student' },
@@ -9,7 +15,7 @@ const userSchema = new mongoose.Schema({
     batch: { type: Number },
 }, { timestamps: true });
 
-// CRASH FIX: Removed 'next' parameter
+// CRASH FIX: Removed 'next' parameter completely
 userSchema.pre('save', function() {
     if (this.role === 'student' && this.username.length >= 7) {
         const yearShort = this.username.substring(3, 5);
