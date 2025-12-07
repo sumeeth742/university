@@ -10,44 +10,53 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
     <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, .serif { font-family: 'Playfair Display', serif; }
+        
+        /* Smooth Fade Animation for Slider */
+        .fade-enter { opacity: 0; transition: opacity 1s ease-in-out; }
+        .fade-enter-active { opacity: 1; }
+        .fade-exit { opacity: 1; transition: opacity 1s ease-in-out; }
+        .fade-exit-active { opacity: 0; }
+
         @media print {
             .no-print { display: none !important; }
             .print-border { border: 2px solid black !important; }
-            body { background: white; -webkit-print-color-adjust: exact; }
+            body { background: white; }
         }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
-<body class="font-sans antialiased text-slate-800">
-    <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
         const API_URL = "/api"; 
 
         // --- ICONS ---
-        const ICONS = {
-            Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
-            UploadCloud: <g><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></g>,
-            Trash2: <g><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></g>,
-            GraduationCap: <g><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></g>,
-            Printer: <g><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></g>,
-            Users: <g><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>,
-            XCircle: <g><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></g>,
-            Lock: <g><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></g>,
-            User: <g><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></g>
+        const Icon = ({ name, size = 20, className="" }) => {
+            const icons = {
+                Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+                UploadCloud: <g><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></g>,
+                Trash2: <g><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></g>,
+                GraduationCap: <g><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></g>,
+                Printer: <g><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></g>,
+                Users: <g><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g>,
+                XCircle: <g><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></g>,
+                ArrowRight: <path d="M5 12h14M12 5l7 7-7 7"/>,
+                User: <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>,
+                Lock: <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`inline-flex align-middle ${className}`}>
+                    {icons[name] || <circle cx="12" cy="12" r="10"/>}
+                </svg>
+            );
         };
-        const Icon = ({ name, size = 20, className="" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`inline-flex align-middle ${className}`}>
-                {ICONS[name] || <circle cx="12" cy="12" r="10"/>}
-            </svg>
-        );
 
         const getGradePoint = (g) => {
             g = g ? g.toUpperCase().trim() : '';
@@ -56,7 +65,7 @@
             if(g==='P') return 4; return 0; 
         };
 
-        // --- GLASSMORPHISM LOGIN ---
+        // --- SPLIT SCREEN LOGIN ---
         const Login = ({ onLogin }) => {
             const [role, setRole] = useState('student');
             const [username, setUsername] = useState('');
@@ -65,6 +74,22 @@
             const [month, setMonth] = useState('');
             const [year, setYear] = useState('');
             const [msg, setMsg] = useState('');
+            const [loading, setLoading] = useState(false);
+            
+            // Slider State
+            const [slideIndex, setSlideIndex] = useState(0);
+            const slides = [
+                "https://images.unsplash.com/photo-1562774053-701939374585?q=80&w=1986&auto=format&fit=crop", // College Campus
+                "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?q=80&w=2070&auto=format&fit=crop", // Library
+                "https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=2070&auto=format&fit=crop"  // Students
+            ];
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setSlideIndex((prev) => (prev + 1) % slides.length);
+                }, 5000);
+                return () => clearInterval(timer);
+            }, []);
 
             const days = Array.from({length: 31}, (_, i) => i + 1);
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -73,11 +98,12 @@
 
             const handleLogin = async (e) => {
                 e.preventDefault();
-                setMsg('Verifying...');
+                setMsg('');
+                setLoading(true);
                 
                 let finalPassword = password;
                 if (role === 'student') {
-                    if (!day || !month || !year) { setMsg("❌ Please select complete DOB"); return; }
+                    if (!day || !month || !year) { setMsg("❌ Select complete DOB"); setLoading(false); return; }
                     const m = months.indexOf(month) + 1;
                     finalPassword = `${year}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 }
@@ -90,80 +116,98 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
-                        if (data.role !== role) { setMsg(`Access Denied: Not an ${role}`); return; }
-                        onLogin(data);
+                        if (data.role !== role) { setMsg(`Access Denied: Not an ${role}`); } 
+                        else { onLogin(data); }
                     } else { setMsg(data.message || "Invalid Credentials"); }
                 } catch (err) { setMsg("Server connection failed"); }
+                setLoading(false);
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=2070&auto=format&fit=crop')"}}>
-                    {/* Dark Overlay for readability */}
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-
-                    {/* Glass Card */}
-                    <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
-                        
-                        {/* Logo / Header */}
-                        <div className="text-center mb-8">
-                            <div className="mx-auto bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mb-4 border border-white/30 text-white">
-                                <Icon name="GraduationCap" size={32}/>
+                <div className="flex h-screen w-full bg-white">
+                    {/* LEFT SIDE: SLIDER */}
+                    <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden">
+                        {slides.map((img, i) => (
+                            <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === slideIndex ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className="absolute inset-0 bg-blue-900/40 mix-blend-multiply z-10"></div>
+                                <img src={img} className="w-full h-full object-cover" />
                             </div>
-                            <h1 className="text-3xl font-bold text-white tracking-wide">Welcome Back</h1>
-                            <p className="text-blue-100 text-sm mt-1">University Result Portal</p>
+                        ))}
+                        <div className="relative z-20 m-auto text-center px-12 text-white">
+                            <h2 className="text-5xl font-bold mb-4 serif tracking-wide">Excellence in Education</h2>
+                            <p className="text-lg text-blue-100 font-light">Empowering the next generation of leaders and innovators.</p>
                         </div>
+                        <div className="absolute bottom-10 left-0 w-full flex justify-center gap-2 z-20">
+                            {slides.map((_, i) => (
+                                <button key={i} onClick={() => setSlideIndex(i)} className={`h-2 rounded-full transition-all ${i === slideIndex ? 'w-8 bg-white' : 'w-2 bg-white/50'}`} />
+                            ))}
+                        </div>
+                    </div>
 
-                        {/* Toggle */}
-                        <div className="flex bg-black/20 p-1 rounded-lg mb-6 border border-white/10">
-                            <button onClick={() => {setRole('student'); setMsg('')}} 
-                                className={`flex-1 py-2 font-bold text-sm rounded-md transition-all duration-300 ${role === 'student' ? 'bg-white text-blue-900 shadow-lg' : 'text-gray-300 hover:text-white'}`}>
-                                Student
-                            </button>
-                            <button onClick={() => {setRole('admin'); setMsg('')}} 
-                                className={`flex-1 py-2 font-bold text-sm rounded-md transition-all duration-300 ${role === 'admin' ? 'bg-white text-blue-900 shadow-lg' : 'text-gray-300 hover:text-white'}`}>
-                                Admin
-                            </button>
-                        </div>
-                        
-                        {msg && <div className="bg-red-500/80 backdrop-blur-md text-white p-3 rounded-lg mb-4 text-sm font-bold text-center border border-red-400">{msg}</div>}
-                        
-                        <form onSubmit={handleLogin} className="space-y-5">
-                            <div className="relative group">
-                                <Icon name="User" className="absolute left-3 top-3 text-white/60 group-focus-within:text-white transition-colors" />
-                                <input className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-lg focus:ring-2 focus:ring-white/50 focus:border-transparent outline-none text-white placeholder-white/50 transition-all" 
-                                    placeholder={role === 'student' ? "USN (e.g. 3BR...)" : "Username"} 
-                                    value={username} onChange={e=>setUsername(e.target.value)} required />
+                    {/* RIGHT SIDE: LOGIN FORM */}
+                    <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
+                        <div className="w-full max-w-md">
+                            <div className="mb-10">
+                                <div className="inline-flex items-center gap-3 mb-2 text-blue-800">
+                                    <Icon name="GraduationCap" size={32} />
+                                    <span className="font-bold text-xl tracking-tight">UNIPORTAL</span>
+                                </div>
+                                <h1 className="text-3xl font-bold text-slate-900 serif">Welcome back</h1>
+                                <p className="text-slate-500 mt-2">Please enter your details to access your dashboard.</p>
                             </div>
 
-                            {role === 'student' ? (
+                            {/* TOGGLE */}
+                            <div className="flex bg-slate-200 p-1 rounded-lg mb-8">
+                                <button onClick={() => {setRole('student'); setMsg('')}} className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${role === 'student' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Student</button>
+                                <button onClick={() => {setRole('admin'); setMsg('')}} className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${role === 'admin' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+                            </div>
+
+                            {msg && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-6 text-sm font-medium border border-red-100 flex items-center gap-2"><Icon name="XCircle" size={16}/> {msg}</div>}
+
+                            <form onSubmit={handleLogin} className="space-y-5">
                                 <div>
-                                    <label className="text-xs font-bold text-blue-100 uppercase ml-1 mb-1 block">Date of Birth</label>
-                                    <div className="flex gap-2">
-                                        <select className="flex-1 p-3 bg-black/20 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer [&>option]:text-black" value={day} onChange={e=>setDay(e.target.value)} required>
-                                            <option value="">DD</option>{days.map(d=><option key={d} value={d}>{d}</option>)}
-                                        </select>
-                                        <select className="flex-1 p-3 bg-black/20 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer [&>option]:text-black" value={month} onChange={e=>setMonth(e.target.value)} required>
-                                            <option value="">MM</option>{months.map(m=><option key={m} value={m}>{m}</option>)}
-                                        </select>
-                                        <select className="flex-1 p-3 bg-black/20 border border-white/10 rounded-lg text-white focus:ring-2 focus:ring-white/50 outline-none cursor-pointer [&>option]:text-black" value={year} onChange={e=>setYear(e.target.value)} required>
-                                            <option value="">YYYY</option>{years.map(y=><option key={y} value={y}>{y}</option>)}
-                                        </select>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{role === 'student' ? 'USN Number' : 'Username'}</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-3.5 text-slate-400"><Icon name="User" size={18}/></span>
+                                        <input className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm" 
+                                            placeholder={role === 'student' ? "e.g. 3BR23CS001" : "Enter Username"} 
+                                            value={username} onChange={e=>setUsername(e.target.value)} required />
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="relative group">
-                                    <Icon name="Lock" className="absolute left-3 top-3 text-white/60 group-focus-within:text-white transition-colors" />
-                                    <input type="password" className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-lg focus:ring-2 focus:ring-white/50 outline-none text-white placeholder-white/50 transition-all" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-                                </div>
-                            )}
 
-                            <button className="w-full bg-white text-blue-900 hover:bg-blue-50 font-bold py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg mt-4">
-                                {role === 'student' ? 'Access Results' : 'Login Dashboard'}
-                            </button>
-                        </form>
+                                {role === 'student' ? (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Date of Birth</label>
+                                        <div className="flex gap-2">
+                                            <select className="flex-1 p-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer" value={day} onChange={e=>setDay(e.target.value)} required>
+                                                <option value="">DD</option>{days.map(d=><option key={d}>{d}</option>)}
+                                            </select>
+                                            <select className="flex-1 p-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer" value={month} onChange={e=>setMonth(e.target.value)} required>
+                                                <option value="">Month</option>{months.map(m=><option key={m}>{m}</option>)}
+                                            </select>
+                                            <select className="flex-1 p-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer" value={year} onChange={e=>setYear(e.target.value)} required>
+                                                <option value="">YYYY</option>{years.map(y=><option key={y}>{y}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-3.5 text-slate-400"><Icon name="Lock" size={18}/></span>
+                                            <input type="password" className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} required />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button disabled={loading} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg transition-all duration-200 shadow-md flex items-center justify-center gap-2">
+                                    {loading ? "Processing..." : <span>Login <Icon name="ArrowRight" size={16}/></span>}
+                                </button>
+                            </form>
+                            
+                            <p className="text-center text-slate-400 text-xs mt-8">© 2025 University Result Management System</p>
+                        </div>
                     </div>
-                    
-                    <div className="absolute bottom-4 text-white/40 text-xs">© 2025 University Portal</div>
                 </div>
             );
         };
@@ -223,40 +267,40 @@
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 p-4 md:p-10">
-                    <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center text-slate-700"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-slate-200 px-4 py-2 rounded text-sm font-bold hover:bg-slate-300 transition">Logout</button></div>
+                <div className="min-h-screen bg-slate-50 p-4 md:p-10 h-full overflow-auto">
+                    <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center text-slate-800"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-white border px-4 py-2 rounded text-sm font-bold hover:bg-slate-50 transition shadow-sm text-red-600">Logout</button></div>
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-10">
-                        <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200 hover:shadow-xl transition">
-                            <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={40}/></div>
-                            <h2 className="text-xl font-bold mb-2">Upload Results</h2>
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition">
+                            <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={32}/></div>
+                            <h2 className="text-lg font-bold mb-2 text-slate-800">Upload Results</h2>
                             <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                 <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
                                 <p className="text-xs text-gray-400 mt-2">Format: USN, Name, DOB, Sem, Sub, Code, Grd, Crd</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-xl shadow-lg text-center border border-slate-200 hover:shadow-xl transition">
-                            <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={40}/></div>
-                            <h2 className="text-xl font-bold mb-2">Clean Up Data</h2>
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition">
+                            <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={32}/></div>
+                            <h2 className="text-lg font-bold mb-2 text-slate-800">Clean Up Data</h2>
                             <p className="text-sm text-gray-500 mb-4">Enter <b>USN</b>, <b>Name</b> or <b>Semester</b></p>
-                            <div className="flex gap-2"><input className="border p-2 rounded w-full outline-none focus:ring-2 focus:ring-red-200" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={() => handleDelete()} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition">Delete</button></div>
+                            <div className="flex gap-2"><input className="border p-2 rounded w-full outline-none focus:ring-2 focus:ring-red-200" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={() => handleDelete()} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-bold">Delete</button></div>
                         </div>
                     </div>
                     {status && <div className="mt-8 p-4 bg-slate-800 text-white rounded font-bold text-center max-w-xl mx-auto shadow-lg mb-8">{status}</div>}
                     <div className="text-center">
-                        <button onClick={() => { setShowList(!showList); if(!showList) fetchStudents(); }} className="bg-blue-600 text-white px-6 py-3 rounded-full font-bold shadow hover:bg-blue-700 transition flex items-center gap-2 mx-auto">
+                        <button onClick={() => { setShowList(!showList); if(!showList) fetchStudents(); }} className="bg-white border text-slate-600 hover:text-blue-700 px-6 py-3 rounded-full font-bold shadow-sm hover:shadow-md transition flex items-center gap-2 mx-auto">
                             <Icon name="Users"/> {showList ? 'Hide Students' : 'View Registered Students'}
                         </button>
                     </div>
                     {showList && (
                         <div className="mt-8 bg-white rounded-xl shadow overflow-hidden max-w-4xl mx-auto border border-gray-200">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-gray-100 border-b text-gray-600 uppercase"><tr><th className="p-4">USN</th><th className="p-4">Name</th><th className="p-4">Dept</th><th className="p-4 text-red-600">Password (DOB)</th><th className="p-4 text-center">Action</th></tr></thead>
-                                <tbody>
+                                <thead className="bg-gray-50 border-b text-gray-600 uppercase font-semibold"><tr><th className="p-4">USN</th><th className="p-4">Name</th><th className="p-4">Dept</th><th className="p-4 text-red-600">Password</th><th className="p-4 text-center">Action</th></tr></thead>
+                                <tbody className="divide-y divide-gray-100">
                                     {studentList.map(s => (
-                                        <tr key={s._id} className="border-b hover:bg-gray-50">
-                                            <td className="p-4 font-mono font-bold">{s.username}</td><td className="p-4">{s.name}</td><td className="p-4">{s.department}</td><td className="p-4 font-mono text-red-600">{s.password}</td>
-                                            <td className="p-4 text-center"><button onClick={() => handleDelete(s.username)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded transition"><Icon name="XCircle" size={20}/></button></td>
+                                        <tr key={s._id} className="hover:bg-gray-50">
+                                            <td className="p-4 font-mono font-bold text-slate-700">{s.username}</td><td className="p-4 text-slate-600">{s.name}</td><td className="p-4 text-slate-500 text-xs">{s.department}</td><td className="p-4 font-mono text-red-500">{s.password}</td>
+                                            <td className="p-4 text-center"><button onClick={() => handleDelete(s.username)} className="text-red-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition"><Icon name="XCircle" size={18}/></button></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -277,7 +321,6 @@
                 const map = { 'CS': 'COMPUTER SCIENCE & ENGINEERING', 'EC': 'ELECTRONICS & COMMUNICATION ENGG', 'ME': 'MECHANICAL ENGINEERING', 'CV': 'CIVIL ENGINEERING' };
                 return map[dept] || dept + " ENGINEERING";
             };
-
             const getSemNumber = (semName) => parseInt(semName.match(/(\d+)/)?.[0] || 0);
 
             useEffect(() => {
@@ -292,14 +335,12 @@
                 const semData = fullData[index];
                 setSelectedSem(semData);
                 const currentSemNum = getSemNumber(semData.semester);
-                
                 let semCreditsReg = 0, semCreditsEarned = 0;
                 semData.subjects.forEach(sub => {
                     const cred = Number(sub.credits);
                     semCreditsReg += cred;
                     if (sub.grade !== 'F' && sub.grade !== 'Ab') semCreditsEarned += cred;
                 });
-
                 let totalPoints = 0, totalCredits = 0;
                 fullData.forEach(s => {
                     if (getSemNumber(s.semester) <= currentSemNum) {
@@ -310,12 +351,11 @@
                     }
                 });
                 const finalCGPA = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
-
                 setStats({ creditsReg: semCreditsReg, creditsEarned: semCreditsEarned, sgpa: semData.gpa, cgpa: finalCGPA });
             };
 
             return (
-                <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans">
+                <div className="min-h-screen bg-gray-100 p-4 md:p-8 font-sans h-full overflow-auto">
                     <div className="no-print flex justify-between items-center mb-6 bg-white p-4 rounded shadow-sm border border-gray-200">
                         <h1 className="text-lg font-bold text-slate-700 flex items-center gap-2"><Icon name="GraduationCap"/> STUDENT PORTAL</h1>
                         <div className="flex gap-4">
@@ -323,7 +363,7 @@
                                 onChange={(e) => handleSemChange(e.target.value)} value={selectedSem ? allResults.findIndex(s => s.semester === selectedSem.semester) : 0}>
                                 {allResults.map((s, i) => <option key={i} value={i}>{s.semester}</option>)}
                             </select>
-                            <button onClick={onLogout} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200">LOGOUT</button>
+                            <button onClick={onLogout} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded border border-red-200 hover:bg-red-50">LOGOUT</button>
                         </div>
                     </div>
 
@@ -335,9 +375,8 @@
                                 <div className="bg-white p-4 border-l-4 border-red-600 shadow-sm"><p className="text-xs text-gray-500 uppercase font-bold">SGPA</p><p className="text-2xl font-bold text-slate-800">{stats.sgpa}</p></div>
                                 <div className="bg-white p-4 border-l-4 border-red-600 shadow-sm"><p className="text-xs text-gray-500 uppercase font-bold">CGPA</p><p className="text-2xl font-bold text-slate-800">{stats.cgpa}</p></div>
                             </div>
-
                             <div className="p-8 md:p-12">
-                                <div className="text-center mb-8"><h1 className="text-2xl font-serif font-bold text-slate-900 uppercase">Institute of Technology</h1><p className="text-xs text-gray-500 mt-1 uppercase">Provisional Grade Card</p></div>
+                                <div className="text-center mb-8"><h1 className="text-3xl font-serif font-bold text-slate-900 uppercase">Institute of Technology</h1><p className="text-xs text-gray-500 mt-1 uppercase tracking-widest">Provisional Grade Card</p></div>
                                 <div className="grid grid-cols-2 gap-x-12 gap-y-4 mb-8 font-serif text-sm">
                                     <div className="flex border-b border-gray-200 pb-1"><span className="font-bold w-32 text-gray-600">Name:</span> <span className="font-bold uppercase">{user.name}</span></div>
                                     <div className="flex border-b border-gray-200 pb-1"><span className="font-bold w-32 text-gray-600">USN:</span> <span className="font-bold">{user.id}</span></div>
