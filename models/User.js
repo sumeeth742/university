@@ -11,31 +11,17 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     name: { type: String, required: true },
     role: { type: String, enum: ['admin', 'student'], default: 'student' },
-    
-    // Automatic Fields
     department: { type: String }, 
     batch: { type: Number },
-    
 }, { timestamps: true });
 
-// --- STANDARD FIX: Explicitly use 'next' ---
-userSchema.pre('save', function(next) {
-    try {
-        // Only run this logic for students
-        if (this.role === 'student' && this.username && this.username.length >= 7) {
-            
-            // Extract Batch (e.g. 3BR21... -> 2021)
-            const yearShort = this.username.substring(3, 5);
-            if (!isNaN(yearShort)) {
-                this.batch = parseInt("20" + yearShort);
-            }
-
-            // Extract Dept (e.g. ...CS... -> CS)
-            this.department = this.username.substring(5, 7);
-        }
-        next(); // <--- CRITICAL: Successfully move to save
-    } catch (error) {
-        next(error); // Pass error if something breaks
+// --- FIX: Removed 'next' to prevent Vercel 500 Error ---
+userSchema.pre('save', function() {
+    if (this.role === 'student' && this.username && this.username.length >= 7) {
+        // Auto-extract Batch & Dept from USN (e.g. 3BR23CS001)
+        const yearShort = this.username.substring(3, 5);
+        if (!isNaN(yearShort)) this.batch = parseInt("20" + yearShort);
+        this.department = this.username.substring(5, 7);
     }
 });
 
