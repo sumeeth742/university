@@ -8,15 +8,13 @@ const bcrypt = require('bcryptjs');
 const connectDB = require('./config/db');
 
 dotenv.config();
-
-// 1. Connect to Database
 connectDB();
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// 2. Smart Path Finding (Fixes "Page Not Found" on Vercel)
+// --- 1. SMART PATH FINDING (Fixes "Page Not Found") ---
 let publicPath = path.join(__dirname, 'public');
 
 // If local path fails, try Vercel root path
@@ -30,45 +28,31 @@ if (fs.existsSync(publicPath)) {
     console.error("❌ CRITICAL: 'public' folder not found. Site will be blank.");
 }
 
-// 3. API Routes
+// --- 2. ROUTES ---
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/results', require('./routes/resultRoutes'));
 
-// 4. Secret Admin Creator
+// Seed Admin Route
 app.get('/api/seed-admin', async (req, res) => {
     try {
         const User = require('./models/User');
         await User.findOneAndDelete({ username: 'admin' });
-        
         const salt = await bcrypt.genSalt(10);
         const hash = await bcrypt.hash('securepassword', salt);
-        
-        await User.create({ 
-            username: 'admin', 
-            password: hash, 
-            name: 'Master Administrator', 
-            role: 'admin', 
-            department: 'IT' 
-        });
-        
-        res.send("<h1>✅ Admin Created</h1><p>User: admin<br>Pass: securepassword</p><a href='/'>Go to Login</a>");
-    } catch (err) { 
-        res.status(500).send("Error: " + err.message); 
-    }
+        await User.create({ username: 'admin', password: hash, name: 'Admin', role: 'admin', department: 'IT' });
+        res.send("<h1>✅ Admin Created</h1><p>User: admin / Pass: securepassword</p>");
+    } catch (err) { res.send(err.message); }
 });
 
-// 5. Fallback Route (Serves React App)
+// --- 3. FALLBACK ROUTE (Fixes White Screen) ---
 app.get('*', (req, res) => {
-    // Don't intercept API calls
-    if (req.path.startsWith('/api')) {
-        return res.status(404).json({ msg: "API Route Not Found" });
-    }
-
-    const indexPath = path.join(publicPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
+    if (req.path.startsWith('/api')) return res.status(404).json({ msg: "API Route Not Found" });
+    
+    const file = path.join(publicPath, 'index.html');
+    if (fs.existsSync(file)) {
+        res.sendFile(file);
     } else {
-        res.status(500).send("<h1>500 Error</h1><p>Frontend file (index.html) is missing.</p>");
+        res.status(500).send("<h1>500 Error: Frontend Missing</h1><p>Check if 'public/index.html' exists.</p>");
     }
 });
 
