@@ -235,18 +235,20 @@
                 <div className="min-h-screen bg-slate-50 p-4 md:p-10 h-full overflow-auto">
                     <div className="flex justify-between items-center mb-10"><h1 className="text-2xl font-bold flex items-center text-slate-800"><Icon name="Shield"/> Admin Console</h1><button onClick={onLogout} className="bg-white border px-4 py-2 rounded text-sm font-bold hover:bg-slate-50 transition shadow-sm text-red-600">Logout</button></div>
                     <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto mb-10">
-                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition">
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition text-center">
                             <div className="mb-4 inline-block p-4 bg-blue-50 rounded-full text-blue-600"><Icon name="UploadCloud" size={32}/></div>
                             <h2 className="text-lg font-bold mb-2 text-slate-800">Upload Results</h2>
                             <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl p-6 bg-slate-50 hover:bg-blue-50 transition mt-4">
                                 <input type="file" accept=".csv" onChange={handleUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                 <p className="font-bold text-slate-600 group-hover:text-blue-600">Select CSV File</p>
+                                <p className="text-xs text-gray-400 mt-2">Format: USN, Name, DOB, Sem, Sub, Code, Grd, Crd</p>
                             </div>
                         </div>
-                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition">
+                        <div className="bg-white p-8 rounded-xl shadow-lg border border-slate-100 hover:shadow-xl transition text-center">
                             <div className="mb-4 inline-block p-4 bg-red-50 rounded-full text-red-600"><Icon name="Trash2" size={32}/></div>
                             <h2 className="text-lg font-bold mb-2 text-slate-800">Clean Up Data</h2>
-                            <div className="flex gap-2 mt-4"><input className="border p-2 rounded w-full outline-none focus:ring-2 focus:ring-red-200" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={() => handleDelete()} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-bold">Delete</button></div>
+                            <p className="text-sm text-gray-500 mb-4">Enter <b>USN</b>, <b>Name</b> or <b>Semester</b></p>
+                            <div className="flex gap-2"><input className="border p-2 rounded w-full outline-none focus:ring-2 focus:ring-red-200" placeholder='e.g. "3BR23CS001"' value={deleteInput} onChange={e=>setDeleteInput(e.target.value)} /><button onClick={() => handleDelete()} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 font-bold">Delete</button></div>
                         </div>
                     </div>
                     {status && <div className="mt-8 p-4 bg-slate-800 text-white rounded font-bold text-center max-w-xl mx-auto shadow-lg mb-8">{status}</div>}
@@ -299,12 +301,14 @@
                 const semData = fullData[index];
                 setSelectedSem(semData);
                 const currentSemNum = getSemNumber(semData.semester);
+                
                 let semCreditsReg = 0, semCreditsEarned = 0;
                 semData.subjects.forEach(sub => {
                     const cred = Number(sub.credits);
                     semCreditsReg += cred;
                     if (sub.grade !== 'F' && sub.grade !== 'Ab') semCreditsEarned += cred;
                 });
+
                 let totalPoints = 0, totalCredits = 0;
                 fullData.forEach(s => {
                     if (getSemNumber(s.semester) <= currentSemNum) {
@@ -315,6 +319,7 @@
                     }
                 });
                 const finalCGPA = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
+
                 setStats({ creditsReg: semCreditsReg, creditsEarned: semCreditsEarned, sgpa: semData.gpa, cgpa: finalCGPA });
             };
 
