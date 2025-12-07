@@ -1,17 +1,19 @@
 const mongoose = require('mongoose');
 
-const connectDB = async () => {
-    try {
-        // Robustly check for the URI variable
-        const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
-        if (!uri) throw new Error("MONGO_URI is missing in .env file");
+let cached = global.mongoose;
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
 
-        await mongoose.connect(uri);
-        console.log("✅ MongoDB Connected Successfully");
-    } catch (error) {
-        console.error("❌ Database Connection Error:", error.message);
-        process.exit(1);
+const connectDB = async () => {
+    if (cached.conn) return cached.conn;
+
+    if (!cached.promise) {
+        const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+        if (!uri) throw new Error("MONGO_URI missing");
+        cached.promise = mongoose.connect(uri).then((mongoose) => mongoose);
     }
+    cached.conn = await cached.promise;
+    console.log("✅ MongoDB Connected");
+    return cached.conn;
 };
 
 module.exports = connectDB;

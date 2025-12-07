@@ -3,81 +3,53 @@ const router = express.Router();
 const Result = require('../models/Result');
 const User = require('../models/User');
 
-// --- HELPER: FORCE DATE TO YYYY-MM-DD ---
 const formatDate = (dateString) => {
     if (!dateString) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString.trim())) return dateString.trim();
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 };
 
-// 1. GET RESULTS
 router.get('/:usn', async (req, res) => {
     try {
         const results = await Result.find({ studentId: req.params.usn });
         res.json(results);
-    } catch (err) {
-        res.status(500).json({ message: "Error fetching results" });
-    }
+    } catch (err) { res.status(500).json({ message: "Error" }); }
 });
 
-// 2. BULK UPLOAD (With Case-Insensitive Fix)
 router.post('/bulk', async (req, res) => {
     try {
         const rows = req.body; 
-        let successCount = 0;
-        let errors = [];
-
-        // Regex checks format (Case insensitive just in case, but we force Upper later)
         const usnRegex = /^3BR\d{2}[A-Z]{2}\d{3}$/i; 
+        let successCount = 0, errors = [];
 
         for (const row of rows) {
-            let rawUsn = row.usn; 
-            if (!rawUsn) continue;
-
-            // --- THE FIX: FORCE UPPERCASE & REMOVE SPACES ---
-            // "3br 23 cs 001" -> "3BR23CS001"
-            const usn = rawUsn.toString().toUpperCase().replace(/\s+/g, '');
+            let usn = row.usn; 
+            if (!usn) continue;
+            usn = usn.toString().toUpperCase().replace(/\s+/g, '');
 
             try {
-                // RULE 1: VALIDATE FORMAT
-                if (!usnRegex.test(usn)) throw new Error(`Invalid USN Format: '${rawUsn}'`);
-
-                // RULE 2: FIX DATE & VALIDATE AGE
+                if (!usnRegex.test(usn)) throw new Error(`Invalid USN: ${usn}`);
+                
                 let cleanDOB = null;
                 if (row.dob) {
-                    cleanDOB = formatDate(row.dob); 
+                    cleanDOB = formatDate(row.dob);
                     const birthDate = new Date(cleanDOB);
                     const today = new Date();
                     let age = today.getFullYear() - birthDate.getFullYear();
-                    const m = today.getMonth() - birthDate.getMonth();
-                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-
-                    if (age < 17) throw new Error(`Student too young (${age} yrs). Min 17.`);
+                    if (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())) age--;
+                    if (age < 17) throw new Error("Student under 17");
                 }
 
-                // --- CHECK IF STUDENT EXISTS ---
-                const existingUser = await User.findOne({ username: usn });
+                const userData = { username: usn, name: row.studentName || "Unknown", role: 'student', department: usn.substring(5, 7) };
+                if (cleanDOB) userData.password = cleanDOB;
 
-                if (!existingUser) {
-                    // === REGISTER NEW STUDENT ===
-                    if (!row.dob) throw new Error(`New student ${usn} requires DOB.`);
+                await User.findOneAndUpdate({ username: usn }, userData, { upsert: true, new: true });
 
-                    // Create Account (USN is already Uppercase here)
-                    await User.create({
-                        username: usn, 
-                        name: row.studentName || "Unknown",
-                        password: cleanDOB, // Set initial password
-                        role: 'student',
-                        department: usn.substring(5, 7)
-                    });
-                } 
-                // If existing, we DO NOT update the password/name to prevent overwrites.
-
-                // --- CALCULATE SGPA ---
                 const getGradePoint = (g) => {
                     g = g ? g.toUpperCase().trim() : '';
                     if(g==='O') return 10; if(g==='A+') return 9; if(g==='A') return 8;
@@ -93,65 +65,34 @@ router.post('/bulk', async (req, res) => {
                 });
                 const sgpa = totalCredits === 0 ? 0 : (totalPoints / totalCredits).toFixed(2);
 
-                // --- SAVE RESULT ---
-                // We delete old results for this semester to avoid duplicates
                 await Result.deleteMany({ studentId: usn, semester: row.semester });
-                
-                await Result.create({
-                    studentId: usn,
-                    semester: row.semester,
-                    gpa: sgpa,
-                    subjects: row.subjects
-                });
+                await Result.create({ studentId: usn, semester: row.semester, gpa: sgpa, subjects: row.subjects });
                 successCount++;
-
-            } catch (rowError) {
-                errors.push(`${usn}: ${rowError.message}`);
-            }
+            } catch (err) { errors.push(`${usn}: ${err.message}`); }
         }
-
-        res.status(200).json({ 
-            message: `Processed ${successCount} results. Errors: ${errors.length}`, 
-            errors: errors 
-        });
-
-    } catch (error) {
-        res.status(500).json({ message: "Critical Server Error: " + error.message });
-    }
+        res.status(200).json({ message: `Processed ${successCount} records.`, errors });
+    } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
-// 3. SMART DELETE
 router.delete('/delete-any', async (req, res) => {
     try {
         const { query } = req.body;
         if (!query) return res.status(400).json({ message: "Input required" });
+        const cleanQuery = query.trim().toUpperCase();
 
-        const cleanQuery = query.trim();
-        const upperQuery = cleanQuery.toUpperCase();
+        const semDelete = await Result.deleteMany({ semester: query.trim() }); // Case sensitive for Semester names usually
+        if (semDelete.deletedCount > 0) return res.json({ message: `Deleted semester '${query}'.` });
 
-        const semDelete = await Result.deleteMany({ semester: cleanQuery });
-        if (semDelete.deletedCount > 0) return res.json({ message: `🗑️ Deleted ${semDelete.deletedCount} records for '${cleanQuery}'.` });
-
-        const users = await User.find({ 
-            $or: [{ name: cleanQuery }, { username: upperQuery }], 
-            role: 'student' 
-        });
-        
+        const users = await User.find({ $or: [{ name: query.trim() }, { username: cleanQuery }], role: 'student' });
         if (users.length > 0) {
-            let deletedUsers = 0;
             for (const user of users) {
                 await Result.deleteMany({ studentId: user.username });
                 await User.findByIdAndDelete(user._id);
-                deletedUsers++;
             }
-            return res.json({ message: `👤 Deleted ${deletedUsers} student(s) matching '${cleanQuery}'.` });
+            return res.json({ message: `Deleted student '${query}'.` });
         }
-
-        return res.status(404).json({ message: `No data found matching '${cleanQuery}'.` });
-
-    } catch (error) {
-        res.status(500).json({ message: "Server Error" });
-    }
+        res.status(404).json({ message: "Not found." });
+    } catch (error) { res.status(500).json({ message: "Error" }); }
 });
 
 module.exports = router;
